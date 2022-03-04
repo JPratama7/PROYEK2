@@ -1,6 +1,12 @@
+import string
 from mysql import connector
-import hashlib
+from pytz import utc, timezone
+from datetime import datetime
+import random as rand
 
+format_time = '%d/%m/%Y %H:%M'
+date_format = '%d %b %y %H:%M'
+timezone_dict = {"WIB": "Asia/Jakarta", "WITA": "Asia/Makassar", "WIT": "Asia/Jayapura"}
 
 def buat_koneksi():
     try:
@@ -86,3 +92,32 @@ def cekemailsiswa(username: str, password: str) -> bool:
         if data != None:
             return [True, data[0]]
         return False
+
+def user_ke_utc(date_time: string) -> datetime:
+    date_time: string = date_time.lower()
+    if not isinstance(date_time, datetime):
+        date_time: datetime = datetime.strptime(date_time, date_format)
+    date_time: datetime = date_time.astimezone(utc).strftime(date_format)
+    date_time: datetime = datetime.strptime(date_time, date_format)
+    return date_time
+
+def buat_id(start: int = 0 , end: int = 9999)-> int:
+    rand.seed(rand.randint(0,99999999))
+    return rand.randint(start, end)
+
+def convert_utc_to_usertz(date_time, user_timezone : string):
+    tz_user = timezone(timezone_dict.get(user_timezone))
+    if not isinstance(date_time, datetime):
+        date_time = datetime.strptime(date_time, format_time)
+
+    date_time = date_time.replace(tzinfo=utc)
+    date_time = date_time.astimezone(tz_user).strftime(format_time)
+    return date_time
+
+def convert_to_utc(date_time) -> datetime:
+    if not isinstance(date_time, datetime):
+        date_time = datetime.strptime(date_time, format_time)
+
+    date_time = date_time.astimezone(utc).strftime(format_time)
+    date_time = datetime.strptime(date_time, format_time)
+    return date_time
