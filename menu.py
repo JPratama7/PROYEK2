@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import re
 from mysql.connector import Error
 
-from lib import cekpass, cekuser, buat_koneksi, cekdata, cekdataadmin, user_ke_utc, convert_utc_to_usertz, buat_id
+from lib import cekpass, cekuser, buat_koneksi, cekdata, cekdataadmin, user_ke_utc, convert_utc_to_usertz, buat_id, checkuser
 mydb = mysql.connector.connect(
     host='localhost',
     user='root',
@@ -264,17 +264,20 @@ def send_welcome(message):
 def router(msg):
     chat_id = msg.chat.id
     text = msg.text.lower().split()
-    if len(text) > 1:
-        if text[1] == 'tambah':
-            tambah_agenda(msg)
-        elif text[1] == 'hapus':
-            remove_agenda(msg)
-        elif text[1] == 'list':
-            list_agenda(msg)
+    if checkuser(chat_id):
+        if len(text) > 1:
+            if text[1] == 'tambah':
+                tambah_agenda(msg)
+            elif text[1] == 'hapus':
+                remove_agenda(msg)
+            elif text[1] == 'list':
+                list_agenda(msg)
+            else:
+                bot.send_message(chat_id, "Perintah tidak dikenali")
         else:
-            bot.send_message(chat_id, "Perintah tidak dikenali")
+            bot.send_message(chat_id, "WHY PERINTAHNYA KURANG")
     else:
-        bot.send_message(chat_id, "WHY PERINTAHNYA KURANG")
+        bot.send_message(chat_id, "Anda tidak memiliki hak akses")
 
 def tambah_agenda(msg):
     chat_id = msg.chat.id
