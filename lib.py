@@ -121,3 +121,13 @@ def convert_to_utc(date_time) -> datetime:
     date_time = date_time.astimezone(utc).strftime(format_time)
     date_time = datetime.strptime(date_time, format_time)
     return date_time
+
+def checkuser(telegram_id: string) -> bool:
+    with buat_koneksi() as conn:
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT COUNT(*) FROM tabel_admin WHERE id_tele ={telegram_id}")
+        user = cursor.fetchone()[0]
+        if user == 1:
+            return True
+        else:
+            return False
