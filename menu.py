@@ -2,9 +2,10 @@ import telebot
 import mysql.connector
 from telebot import types
 from dataclasses import dataclass
+import re
+from mysql.connector import Error
 
-
-from lib import cekpass, cekuser, buat_koneksi, cekdata, cekdataadmin
+from lib import cekpass, cekuser, buat_koneksi, cekdata, cekdataadmin, user_ke_utc, convert_utc_to_usertz, buat_id
 mydb = mysql.connector.connect(
     host='localhost',
     user='root',
@@ -14,7 +15,7 @@ mydb = mysql.connector.connect(
 dict_global = {}
 
 sql = mydb.cursor()
-api = ''
+api = '2132984370:AAEkaWP1x0kOWO3x6r3d6j0555szKPBGU7A'
 bot = telebot.TeleBot(api)
 
 
@@ -258,6 +259,84 @@ def send_welcome(message):
         chat_id, '>>> Daftar Nama Siswa Yang Sudah Mengumpulkan Persyaratan dokumen!!! <<<\n\n'
         '1. Hanan\n 2. Yuda\n 3. Desti')
 
+
+@bot.message_handler(commands=['agenda'])
+def router(msg):
+    chat_id = msg.chat.id
+    text = msg.text.lower().split()
+    if len(text) > 1:
+        if text[1] == 'tambah':
+            tambah_agenda(msg)
+        elif text[1] == 'hapus':
+            remove_agenda(msg)
+        elif text[1] == 'list':
+            list_agenda(msg)
+        else:
+            bot.send_message(chat_id, "Perintah tidak dikenali")
+    else:
+        bot.send_message(chat_id, "WHY PERINTAHNYA KURANG")
+
+def tambah_agenda(msg):
+    chat_id = msg.chat.id
+    text = msg.text.split(' ')
+    text = text[2:]
+    text = ' '.join(text)
+    result = re.split('agendanya', text)
+    if len(result) > 1:
+        try:
+            list = [s.strip() for s in result]
+            agenda = list[1]
+            waktu = user_ke_utc(list[0])
+            with buat_koneksi() as conn:
+                cursor = conn.cursor()
+                query = "INSERT INTO reminder_user VALUES (%s, %s, %s, %s)"
+                cursor.execute(query, (buat_id(), chat_id, agenda, waktu))
+                conn.commit()
+                bot.send_message(chat_id, "Agenda telah ditambahkan")
+        except Exception as e:
+            print(e)
+            bot.send_message(chat_id, "Format agenda tidak sesuai\n"
+                                          "Silahkan mengikuti contoh dibawah ini\n"
+                                          "/agenda 6 jan 21 17:21 agendanya Mabar Valorant")
+    else:
+        bot.send_message(chat_id, "Format agenda tidak sesuai\n"
+                                      "Silahkan mengikuti contoh dibawah ini\n"
+                                      "/agenda 6 jan 21 17:21 agendanya Mabar Valorant")
+
+def list_agenda(msg):
+    chat_id = int(msg.chat.id)
+    with buat_koneksi() as conn:
+        cursor = conn.cursor()
+        query = f"SELECT isi_reminder, waktu, id_reminder FROM reminder_user WHERE id_telegram = {chat_id}"
+        cursor.execute(query)
+        result = cursor.fetchall()
+        if len(result) > 0:
+            for i in result:
+                bot.send_message(chat_id, f"ID Reminder: {i[2]}\nWaktu: {convert_utc_to_usertz(i[1], 'WIB')}\nAgenda: {i[0]}")
+        else:
+            bot.send_message(chat_id, "Anda belum memiliki agenda")
+
+def remove_agenda(msg):
+    chat_id = msg.chat.id
+    text = msg.text.split(' ')
+    text = text[2:]
+    if len(text) != 0:
+        if text[0].isdigit():
+            agenda = int(text[0])
+            with buat_koneksi() as conn:
+                cursor = conn.cursor()
+                query = "DELETE FROM reminder_user WHERE id_reminder = %s AND id_telegram = %s"
+                try:
+                    cursor.execute(query, (agenda, chat_id))
+                    bot.send_message(chat_id, "Agenda telah Dihapus")
+                except Error:
+                    bot.send_message(chat_id, "Agenda tidak ditemukan")
+        else:
+            bot.send_message(chat_id, "WHY U ISI SELAIN ANGKA")
+    else:
+        bot.send_message(chat_id, "Format agenda tidak sesuai\n"
+                                      "Silahkan mengikuti contoh dibawah ini\n"
+                                      "/agenda hapus 123456")
 
 print('bot start running')
 bot.polling()
